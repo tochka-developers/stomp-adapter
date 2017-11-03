@@ -9,7 +9,7 @@
 - Поддерживает Stomp 1.2.
 - Просто так удобнее:
 ```php
-$stomp = new \Tochka\Esb\Stomp\StompClient($url, $login, $password);
+$stomp = new \Tochka\Esb\Stomp\StompAdapter($url, $login, $password);
 
 // Отправка сообщения
 $stomp->send('queue_1', 'Data');
