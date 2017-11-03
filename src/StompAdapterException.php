@@ -1,6 +1,6 @@
 <?php
 
-namespace Tochka\Integration\Stomp\Exception;
+namespace Tochka\Esb\Stomp;
 
 class StompAdapterException extends \Exception
 {

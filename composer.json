@@ -12,5 +12,8 @@
     "psr-4": {
       "Tochka\\Esb\\Stomp\\": "src/"
     }
+  },
+  "require": {
+    "php": ">=5.6"
   }
 }

@@ -2,8 +2,6 @@
 
 namespace Tochka\Esb\Stomp;
 
-use Tochka\Integration\Stomp\Exception\StompAdapterException;
-
 /**
  * Class StompAdapter
  * @package Tochka\Esb\Stomp
@@ -137,7 +135,7 @@ class StompAdapter
                 break;
             }
 
-            $this->errors[] = '[' . $host . ']: ' . stomp_error();
+            $this->errors[] = '[' . $host . ']: ' . stomp_error($this->stomp);
         }
 
         if (!$link) {
