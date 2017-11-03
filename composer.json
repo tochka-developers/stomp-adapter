@@ -1,0 +1,16 @@
+{
+  "name": "tochka-developers/stomp-adapter",
+  "description": "Stomp protocol utils set",
+  "type": "package",
+  "authors": [
+    {
+      "name": "Babushkin Pavel",
+      "email": "darkdarin@tochka.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Tochka\\Esb\\Stomp\\": "src/"
+    }
+  }
+}
