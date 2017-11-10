@@ -135,7 +135,7 @@ class StompAdapter
                 break;
             }
 
-            $this->errors[] = '[' . $host . ']: ' . stomp_error($this->stomp);
+            $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
         }
 
         if (!$link) {
