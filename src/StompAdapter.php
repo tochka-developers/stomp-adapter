@@ -129,13 +129,15 @@ class StompAdapter
         $link = null;
 
         foreach ($this->hosts as $host) {
-            $link = stomp_connect($host, $this->login, $this->password, $this->headers);
+            try {
+                $link = stomp_connect($host, $this->login, $this->password, $this->headers);
+            } catch (\Exception $e) {
+                $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
+            }
 
             if ($link) {
                 break;
             }
-
-            $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
         }
 
         if (!$link) {
