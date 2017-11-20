@@ -156,9 +156,8 @@ class StompAdapter
 
     public function disconnect()
     {
-        $this->unsubscribeAll();
-
         if ($this->isStompResource()) {
+            $this->unsubscribeAll();
             stomp_close($this->stomp);
         }
     }
