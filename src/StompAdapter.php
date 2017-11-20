@@ -8,6 +8,7 @@ namespace Tochka\Esb\Stomp;
  */
 class StompAdapter
 {
+    const DEFAULT_STOMP_VERSION = '1.2';
     /*** @var resource */
     protected $stomp;
 
@@ -43,7 +44,7 @@ class StompAdapter
         $this->hosts = $this->parseConnectionString($connectionString);
         $this->login = $login;
         $this->password = $password;
-        $this->headers = $headers;
+        $this->headers = array_merge(['accept-version' => self::DEFAULT_STOMP_VERSION], $headers);
 
         $this->checkConnection();
     }
@@ -103,7 +104,8 @@ class StompAdapter
      */
     public function ack($frame)
     {
-        return stomp_ack($this->stomp, !empty($frame['headers']['message-id']) ? $frame['headers']['message-id'] : $frame);
+        $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+        return stomp_ack($this->stomp, $id, ['id' => $id]);
     }
 
     /**
@@ -113,7 +115,8 @@ class StompAdapter
      */
     public function nack($frame)
     {
-        return stomp_nack($this->stomp, !empty($frame['headers']['message-id']) ? $frame['headers']['message-id'] : $frame);
+        $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+        return stomp_nack($this->stomp, $id, ['id' => $id]);
     }
 
     public function checkConnection()
