@@ -72,14 +72,15 @@ class StompAdapter
 
         $headers += ['transaction' => $transactionId];
 
-        try {
-            stomp_begin($this->stomp, $transactionId);
-            stomp_send($this->stomp, $destination, $message, $headers);
-            stomp_commit($this->stomp, $transactionId);
-        } catch (\Exception $e) {
+        if (!stomp_begin($this->stomp, $transactionId) ||
+            !stomp_send($this->stomp, $destination, $message, $headers) ||
+            !stomp_commit($this->stomp, $transactionId)) {
+
+            $error = stomp_error($this->stomp);
+
             stomp_abort($this->stomp, $transactionId);
 
-            throw $e;
+            throw new \RuntimeException($error);
         }
     }
 
