@@ -135,6 +135,9 @@ class StompAdapter
         foreach ($this->hosts as $host) {
             try {
                 $link = stomp_connect($host, $this->login, $this->password, $this->headers);
+                if (!$link) {
+                    $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
+                }
             } catch (\Exception $e) {
                 $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
             }
@@ -145,7 +148,12 @@ class StompAdapter
         }
 
         if (!$link) {
-            throw new StompAdapterException('Could`nt connect to Brocker by provided hosts: ' . implode('; ', $this->errors));
+            if (empty($this->errors)) {
+                $errors = stomp_connect_error();
+            } else {
+                $errors = implode('; ', $this->errors);
+            }
+            throw new StompAdapterException('Could`nt connect to Brocker by provided hosts: ' . $errors);
         }
 
         $this->stomp = $link;
