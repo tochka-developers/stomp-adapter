@@ -30,7 +30,7 @@ class StompAdapter
     /**
      * Примеры $connectionString:
      * - Use only one broker uri: tcp://localhost:61614
-     * - use failover in given order: failover://(tcp://localhost:61614,ssl://localhost:61612)
+     * - Use failover in given order: failover://(tcp://localhost:61614,ssl://localhost:61612)
      *
      * @param string $connectionString
      * @param string $login
@@ -58,6 +58,7 @@ class StompAdapter
     }
 
     /**
+     * Отправляет сообщение
      * @param string $destination
      * @param string $message
      * @param array  $headers
@@ -68,24 +69,21 @@ class StompAdapter
     {
         $this->checkConnection();
 
-        $transactionId = uniqid('client', true);
+        $receiptId = uniqid('message', true);
 
-        $headers += ['transaction' => $transactionId];
+        $headers += ['receipt' => $receiptId];
 
-        if (!stomp_begin($this->stomp, $transactionId) ||
-            !stomp_send($this->stomp, $destination, $message, $headers) ||
-            !stomp_commit($this->stomp, $transactionId)) {
-
+        if (!stomp_send($this->stomp, $destination, $message, $headers)) {
             $error = stomp_error($this->stomp);
-
-            stomp_abort($this->stomp, $transactionId);
 
             throw new \RuntimeException($error);
         }
     }
 
     /**
+     * Вычитывает и возвращает новые сообщения (если они есть)
      * @return array|null
+     * @throws StompAdapterException
      */
     public function getNextMessage()
     {
@@ -99,6 +97,7 @@ class StompAdapter
     }
 
     /**
+     * Подтверждает обработку сообщения
      * @param $frame
      *
      * @return bool
@@ -110,6 +109,7 @@ class StompAdapter
     }
 
     /**
+     * Отклоняет обработку сообщения
      * @param $frame
      *
      * @return mixed
@@ -120,6 +120,10 @@ class StompAdapter
         return stomp_nack($this->stomp, $id, ['id' => $id]);
     }
 
+    /**
+     * Проверяет, есть ли в данный момент соединение
+     * @throws StompAdapterException
+     */
     public function checkConnection()
     {
         if (!$this->isStompResource() || $this->hasErrors()) {
@@ -127,6 +131,10 @@ class StompAdapter
         }
     }
 
+    /**
+     * Выполняет подключение
+     * @throws StompAdapterException
+     */
     public function connect()
     {
         $this->errors = [];
@@ -159,6 +167,10 @@ class StompAdapter
         $this->stomp = $link;
     }
 
+    /**
+     * Выполняет переподключение
+     * @throws StompAdapterException
+     */
     public function reconnect()
     {
         $this->disconnect();
@@ -166,6 +178,9 @@ class StompAdapter
         $this->subscribeAll();
     }
 
+    /**
+     * Выполняет отключение
+     */
     public function disconnect()
     {
         if ($this->isStompResource()) {
@@ -221,7 +236,7 @@ class StompAdapter
 
             stomp_subscribe($this->stomp, $queue, [
                 'id' => $this->queues[$queue],
-                'ack' => 'client'
+                'ack' => 'client-individual'
             ]);
         }
 
