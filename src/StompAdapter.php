@@ -225,6 +225,10 @@ class StompAdapter
     /**
      * Подписываемся на очередь
      *
+     * Note: if your STOMP client is implemented using a dynamic scripting language like Ruby, say,
+     * then this parameter (activemq.prefetchSize) must be set to 1 as there is no notion of a client-side message size to be sized.
+     * @url https://activemq.apache.org/stomp
+     *
      * @param string $queue
      *
      * @return mixed
@@ -236,7 +240,8 @@ class StompAdapter
 
             stomp_subscribe($this->stomp, $queue, [
                 'id' => $this->queues[$queue],
-                'ack' => 'client-individual'
+                'ack' => 'client-individual',
+                'activemq.prefetchSize' => 1,
             ]);
         }
 
