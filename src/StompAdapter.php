@@ -18,8 +18,23 @@ class StompAdapter
     protected $login;
     /** @var string */
     protected $password;
-    /** @var array */
-    protected $headers = [];
+    /**
+     * Note: if your STOMP client is implemented using a dynamic scripting language like Ruby, say,
+     * then this parameter (activemq.prefetchSize) must be set to 1 as there is no notion of a client-side message size
+     * to be sized.
+     * @url https://activemq.apache.org/stomp
+     *
+     * @var array
+     */
+    protected $headers = [
+        'connect' => [
+            'accept-version' => self::DEFAULT_STOMP_VERSION,
+        ],
+        'subscribe' => [
+            'ack' => 'client-individual',
+            'activemq.prefetchSize' => 1,
+        ],
+    ];
 
     /** @var string[] */
     protected $errors = [];
@@ -44,7 +59,7 @@ class StompAdapter
         $this->hosts = $this->parseConnectionString($connectionString);
         $this->login = $login;
         $this->password = $password;
-        $this->headers = array_merge(['accept-version' => self::DEFAULT_STOMP_VERSION], $headers);
+        $this->headers = array_merge_recursive($this->headers, $headers);
 
         $this->checkConnection();
     }
@@ -142,7 +157,7 @@ class StompAdapter
 
         foreach ($this->hosts as $host) {
             try {
-                $link = stomp_connect($host, $this->login, $this->password, $this->headers);
+                $link = stomp_connect($host, $this->login, $this->password, $this->headers['connect']);
                 if (!$link) {
                     $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
                 }
@@ -225,10 +240,6 @@ class StompAdapter
     /**
      * Подписываемся на очередь
      *
-     * Note: if your STOMP client is implemented using a dynamic scripting language like Ruby, say,
-     * then this parameter (activemq.prefetchSize) must be set to 1 as there is no notion of a client-side message size to be sized.
-     * @url https://activemq.apache.org/stomp
-     *
      * @param string $queue
      *
      * @return mixed
@@ -238,11 +249,10 @@ class StompAdapter
         if (empty($this->queues[$queue])) {
             $this->queues[$queue] = uniqid('client', true);
 
-            stomp_subscribe($this->stomp, $queue, [
-                'id' => $this->queues[$queue],
-                'ack' => 'client-individual',
-                'activemq.prefetchSize' => 1,
-            ]);
+            $headers = $this->headers['subscribe'];
+            $headers['id'] = $this->queues[$queue];
+
+            stomp_subscribe($this->stomp, $queue, $headers);
         }
 
         return $this->queues[$queue];
