@@ -4,6 +4,7 @@ namespace Tochka\Esb\Stomp;
 
 /**
  * Class StompAdapter
+ *
  * @package Tochka\Esb\Stomp
  */
 class StompAdapter
@@ -18,8 +19,23 @@ class StompAdapter
     protected $login;
     /** @var string */
     protected $password;
-    /** @var array */
-    protected $headers = [];
+    /**
+     * Note: if your STOMP client is implemented using a dynamic scripting language like Ruby, say,
+     * then this parameter (activemq.prefetchSize) must be set to 1 as there is no notion of a client-side message size
+     * to be sized.
+     * @url https://activemq.apache.org/stomp
+     *
+     * @var array
+     */
+    protected $headers = [
+        'connect' => [
+            'accept-version' => self::DEFAULT_STOMP_VERSION,
+        ],
+        'subscribe' => [
+            'ack' => 'client-individual',
+            'activemq.prefetchSize' => 1,
+        ],
+    ];
 
     /** @var string[] */
     protected $errors = [];
@@ -36,15 +52,17 @@ class StompAdapter
      * @param string $login
      * @param string $password
      * @param array  $headers
+     * @param array  $subscribeHeaders
      *
-     * @throws \Exception
+     * @throws \Tochka\Esb\Stomp\StompAdapterException
      */
-    public function __construct($connectionString, $login, $password, array $headers = [])
+    public function __construct($connectionString, $login, $password, array $headers = [], array $subscribeHeaders = [])
     {
         $this->hosts = $this->parseConnectionString($connectionString);
         $this->login = $login;
         $this->password = $password;
-        $this->headers = array_merge(['accept-version' => self::DEFAULT_STOMP_VERSION], $headers);
+        $this->headers['connect'] = array_merge($this->headers['connect'], $headers);
+        $this->headers['subscribe'] = array_merge($this->headers['subscribe'], $subscribeHeaders);
 
         $this->checkConnection();
     }
@@ -59,6 +77,7 @@ class StompAdapter
 
     /**
      * Отправляет сообщение
+     *
      * @param string $destination
      * @param string $message
      * @param array  $headers
@@ -82,6 +101,7 @@ class StompAdapter
 
     /**
      * Вычитывает и возвращает новые сообщения (если они есть)
+     *
      * @return array|null
      * @throws StompAdapterException
      */
@@ -98,6 +118,7 @@ class StompAdapter
 
     /**
      * Подтверждает обработку сообщения
+     *
      * @param $frame
      *
      * @return bool
@@ -105,11 +126,13 @@ class StompAdapter
     public function ack($frame)
     {
         $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+
         return stomp_ack($this->stomp, $id, ['id' => $id]);
     }
 
     /**
      * Отклоняет обработку сообщения
+     *
      * @param $frame
      *
      * @return mixed
@@ -117,11 +140,13 @@ class StompAdapter
     public function nack($frame)
     {
         $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+
         return stomp_nack($this->stomp, $id, ['id' => $id]);
     }
 
     /**
      * Проверяет, есть ли в данный момент соединение
+     *
      * @throws StompAdapterException
      */
     public function checkConnection()
@@ -133,6 +158,7 @@ class StompAdapter
 
     /**
      * Выполняет подключение
+     *
      * @throws StompAdapterException
      */
     public function connect()
@@ -142,7 +168,7 @@ class StompAdapter
 
         foreach ($this->hosts as $host) {
             try {
-                $link = stomp_connect($host, $this->login, $this->password, $this->headers);
+                $link = stomp_connect($host, $this->login, $this->password, $this->headers['connect']);
                 if (!$link) {
                     $this->errors[] = '[' . $host . ']: ' . stomp_connect_error();
                 }
@@ -169,6 +195,7 @@ class StompAdapter
 
     /**
      * Выполняет переподключение
+     *
      * @throws StompAdapterException
      */
     public function reconnect()
@@ -225,10 +252,6 @@ class StompAdapter
     /**
      * Подписываемся на очередь
      *
-     * Note: if your STOMP client is implemented using a dynamic scripting language like Ruby, say,
-     * then this parameter (activemq.prefetchSize) must be set to 1 as there is no notion of a client-side message size to be sized.
-     * @url https://activemq.apache.org/stomp
-     *
      * @param string $queue
      *
      * @return mixed
@@ -238,11 +261,10 @@ class StompAdapter
         if (empty($this->queues[$queue])) {
             $this->queues[$queue] = uniqid('client', true);
 
-            stomp_subscribe($this->stomp, $queue, [
-                'id' => $this->queues[$queue],
-                'ack' => 'client-individual',
-                'activemq.prefetchSize' => 1,
-            ]);
+            $headers = $this->headers['subscribe'];
+            $headers['id'] = $this->queues[$queue];
+
+            stomp_subscribe($this->stomp, $queue, $headers);
         }
 
         return $this->queues[$queue];
@@ -262,13 +284,14 @@ class StompAdapter
         }
 
         stomp_unsubscribe($this->stomp, $queue, [
-            'id' => $this->queues[$queue]
+            'id' => $this->queues[$queue],
         ]);
         $this->queues[$queue] = false;
     }
 
     /**
      * Проверяет, что у нас есть активный ресурс подключения
+     *
      * @return bool
      */
     protected function isStompResource()
@@ -278,6 +301,7 @@ class StompAdapter
 
     /**
      * Проверяет на наличие ошибок
+     *
      * @return bool
      */
     protected function hasErrors()
@@ -287,6 +311,7 @@ class StompAdapter
 
     /**
      * Сериализуем только важные данные
+     *
      * @return array
      */
     public function __sleep()
