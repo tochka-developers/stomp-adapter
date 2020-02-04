@@ -4,6 +4,7 @@ namespace Tochka\Esb\Stomp;
 
 /**
  * Class StompAdapter
+ *
  * @package Tochka\Esb\Stomp
  */
 class StompAdapter
@@ -51,15 +52,17 @@ class StompAdapter
      * @param string $login
      * @param string $password
      * @param array  $headers
+     * @param array  $subscribeHeaders
      *
-     * @throws \Exception
+     * @throws \Tochka\Esb\Stomp\StompAdapterException
      */
-    public function __construct($connectionString, $login, $password, array $headers = [])
+    public function __construct($connectionString, $login, $password, array $headers = [], array $subscribeHeaders = [])
     {
         $this->hosts = $this->parseConnectionString($connectionString);
         $this->login = $login;
         $this->password = $password;
-        $this->headers = array_merge_recursive($this->headers, $headers);
+        $this->headers['connect'] = array_merge($this->headers['connect'], $headers);
+        $this->headers['subscribe'] = array_merge($this->headers['subscribe'], $subscribeHeaders);
 
         $this->checkConnection();
     }
@@ -74,6 +77,7 @@ class StompAdapter
 
     /**
      * Отправляет сообщение
+     *
      * @param string $destination
      * @param string $message
      * @param array  $headers
@@ -97,6 +101,7 @@ class StompAdapter
 
     /**
      * Вычитывает и возвращает новые сообщения (если они есть)
+     *
      * @return array|null
      * @throws StompAdapterException
      */
@@ -113,6 +118,7 @@ class StompAdapter
 
     /**
      * Подтверждает обработку сообщения
+     *
      * @param $frame
      *
      * @return bool
@@ -120,11 +126,13 @@ class StompAdapter
     public function ack($frame)
     {
         $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+
         return stomp_ack($this->stomp, $id, ['id' => $id]);
     }
 
     /**
      * Отклоняет обработку сообщения
+     *
      * @param $frame
      *
      * @return mixed
@@ -132,11 +140,13 @@ class StompAdapter
     public function nack($frame)
     {
         $id = !empty($frame['headers']['ack']) ? $frame['headers']['ack'] : $frame;
+
         return stomp_nack($this->stomp, $id, ['id' => $id]);
     }
 
     /**
      * Проверяет, есть ли в данный момент соединение
+     *
      * @throws StompAdapterException
      */
     public function checkConnection()
@@ -148,6 +158,7 @@ class StompAdapter
 
     /**
      * Выполняет подключение
+     *
      * @throws StompAdapterException
      */
     public function connect()
@@ -184,6 +195,7 @@ class StompAdapter
 
     /**
      * Выполняет переподключение
+     *
      * @throws StompAdapterException
      */
     public function reconnect()
@@ -272,13 +284,14 @@ class StompAdapter
         }
 
         stomp_unsubscribe($this->stomp, $queue, [
-            'id' => $this->queues[$queue]
+            'id' => $this->queues[$queue],
         ]);
         $this->queues[$queue] = false;
     }
 
     /**
      * Проверяет, что у нас есть активный ресурс подключения
+     *
      * @return bool
      */
     protected function isStompResource()
@@ -288,6 +301,7 @@ class StompAdapter
 
     /**
      * Проверяет на наличие ошибок
+     *
      * @return bool
      */
     protected function hasErrors()
@@ -297,6 +311,7 @@ class StompAdapter
 
     /**
      * Сериализуем только важные данные
+     *
      * @return array
      */
     public function __sleep()
